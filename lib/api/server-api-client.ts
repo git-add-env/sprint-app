@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 
+import { apiFetch } from "@/lib/api/api-fetch"
 import { authOptions } from "@/lib/auth/options"
 
 const API_BASE_URL = process.env.BACKEND_API_URL
@@ -17,26 +18,12 @@ export async function serverApiClient<TResponse>(
   }
 
   const session = auth ? await getServerSession(authOptions) : null
-  const accessToken = session?.accessToken
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  return apiFetch<TResponse>(path, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
+    baseUrl: API_BASE_URL,
+    token: session?.accessToken,
+    headers,
     cache: "no-store",
   })
-
-  if (!response.ok) {
-    // TODO: 백엔드 에러 스펙 확정 후 프론트 공통 에러 처리와 연결하세요.
-    throw new Error(`Server API request failed: ${response.status}`)
-  }
-
-  if (response.status === 204) {
-    return undefined as TResponse
-  }
-
-  return response.json() as Promise<TResponse>
 }

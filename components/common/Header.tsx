@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import LoginDialog from "@/components/common/LoginDialog"
 import OnboardingDialog from "@/components/common/OnboardingDialog"
 import { useSyncAuthUser } from "@/hooks/use-sync-auth-user"
+import { logoutBackend } from "@/lib/auth/user"
 import { cn } from "@/lib/utils"
 
 const navigationItems = [
@@ -23,6 +24,14 @@ export default function Header() {
   const { data: session, status } = useSession()
 
   useSyncAuthUser()
+
+  async function handleLogout() {
+    try {
+      await logoutBackend()
+    } finally {
+      await signOut()
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
@@ -56,7 +65,7 @@ export default function Header() {
           {session?.onboardingRequired ? (
             <OnboardingDialog />
           ) : status === "authenticated" ? (
-            <Button size="sm" variant="outline" onClick={() => signOut()}>
+            <Button size="sm" variant="outline" onClick={handleLogout}>
               로그아웃
             </Button>
           ) : (

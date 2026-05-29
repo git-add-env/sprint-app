@@ -1,31 +1,48 @@
+import { apiFetch, apiFetchWithMeta } from "@/lib/api/api-fetch"
+
 export type SocialProvider = "google" | "github"
 
 export type AppUser = {
-  id: string
+  id: number | string
   email: string
+  name?: string | null
   nickname?: string | null
   job?: string | null
+  career?: string | null
+  techStacks?: string[]
+  introduction?: string | null
+  profileImage?: string | null
+  profileImageUrl?: string | null
+  createdAt?: string
+  updatedAt?: string
 }
 
 export type SocialLoginPayload = {
   provider: SocialProvider
-  providerAccountId: string
+  providerId: string
   email: string
   name?: string | null
   image?: string | null
 }
 
 export type ExistingMemberResponse = {
-  status: "LOGIN_SUCCESS"
+  authStatus: "LOGIN_SUCCESS"
+  isNewUser: false
   accessToken: string
-  refreshToken?: string
   user: AppUser
 }
 
 export type OnboardingRequiredResponse = {
-  status: "ONBOARDING_REQUIRED"
+  authStatus: "ONBOARDING_REQUIRED"
+  isNewUser: true
   tempToken: string
-  email: string
+  socialUser: {
+    provider: SocialProvider
+    providerId: string
+    email: string
+    name?: string | null
+    image?: string | null
+  }
 }
 
 export type SocialLoginResponse = ExistingMemberResponse | OnboardingRequiredResponse
@@ -34,46 +51,69 @@ export type CompleteOnboardingPayload = {
   tempToken: string
   nickname: string
   job: string
+  career: string
+  techStacks: string[]
+  introduction?: string | null
+}
+
+export type CompleteOnboardingResponse = {
+  authStatus: "LOGIN_SUCCESS"
+  isNewUser: true
+  accessToken: string
+  user: AppUser
 }
 
 const API_BASE_URL = process.env.BACKEND_API_URL
+const SOCIAL_LOGIN_PATH = "/api/auth/social-login"
+const SOCIAL_ONBOARDING_PATH = "/api/auth/onboarding"
 
 async function requestBackend<TResponse>(path: string, init: RequestInit) {
   if (!API_BASE_URL) {
     throw new Error("BACKEND_API_URL is not configured")
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  return apiFetch<TResponse>(path, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
+    baseUrl: API_BASE_URL,
     cache: "no-store",
   })
+}
 
-  if (!response.ok) {
-    throw new Error(`Backend request failed: ${response.status}`)
+async function requestBackendWithMeta<TResponse>(path: string, init: RequestInit) {
+  if (!API_BASE_URL) {
+    throw new Error("BACKEND_API_URL is not configured")
   }
 
-  return response.json() as Promise<TResponse>
+  return apiFetchWithMeta<TResponse>(path, {
+    ...init,
+    baseUrl: API_BASE_URL,
+    cache: "no-store",
+  })
 }
 
 export async function exchangeSocialLogin(payload: SocialLoginPayload) {
-  // TODO: 백엔드와 실제 엔드포인트/응답 필드명이 확정되면 경로와 타입을 맞춰주세요.
-  // NextAuth 소셜 인증이 끝난 뒤 provider/providerAccountId/email을 백엔드로 넘겨
-  // 기존 회원이면 accessToken을 받고, 첫 회원이면 온보딩용 tempToken을 받습니다.
-  return requestBackend<SocialLoginResponse>("/auth/social/login", {
+  return requestBackend<SocialLoginResponse>(SOCIAL_LOGIN_PATH, {
     method: "POST",
     body: JSON.stringify(payload),
   })
 }
 
-export async function completeSocialOnboarding(payload: CompleteOnboardingPayload) {
-  // TODO: 온보딩 저장 API 스펙 확정 후 경로/필수 입력값을 백엔드 계약에 맞춰 조정해주세요.
-  // 온보딩이 끝나면 백엔드가 서비스 회원을 생성하고 최종 accessToken을 내려줍니다.
-  return requestBackend<ExistingMemberResponse>("/auth/social/onboarding", {
+export async function completeSocialOnboarding(
+  tempToken: string,
+  payload: Omit<CompleteOnboardingPayload, "tempToken">,
+) {
+  return requestBackend<CompleteOnboardingResponse>(SOCIAL_ONBOARDING_PATH, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ tempToken, ...payload }),
+  })
+}
+
+export async function completeSocialOnboardingWithMeta(
+  tempToken: string,
+  payload: Omit<CompleteOnboardingPayload, "tempToken">,
+) {
+  return requestBackendWithMeta<CompleteOnboardingResponse>(SOCIAL_ONBOARDING_PATH, {
+    method: "POST",
+    body: JSON.stringify({ tempToken, ...payload }),
   })
 }

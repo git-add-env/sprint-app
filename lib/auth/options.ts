@@ -25,7 +25,6 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile, trigger, session }) {
       if (trigger === "update" && session?.accessToken) {
-        // 온보딩 완료 후 useSession().update(...)로 받은 우리 서비스 토큰을 JWT 세션에 반영합니다.
         token.accessToken = session.accessToken
         token.onboardingRequired = false
         token.tempToken = undefined
@@ -46,15 +45,14 @@ export const authOptions: NextAuthOptions = {
       try {
         const result = await exchangeSocialLogin({
           provider: account.provider as SocialProvider,
-          providerAccountId: getProviderAccountId(account),
+          providerId: getProviderAccountId(account),
           email,
           name: profile.name,
           image: "picture" in profile ? String(profile.picture ?? "") : token.picture,
         })
 
-        if (result.status === "LOGIN_SUCCESS") {
+        if (result.authStatus === "LOGIN_SUCCESS") {
           token.accessToken = result.accessToken
-          token.refreshToken = result.refreshToken
           token.appUser = result.user
           token.onboardingRequired = false
           token.tempToken = undefined
@@ -63,20 +61,18 @@ export const authOptions: NextAuthOptions = {
 
         token.onboardingRequired = true
         token.tempToken = result.tempToken
-        token.email = result.email
+        token.email = result.socialUser.email
         token.accessToken = undefined
+        token.appUser = undefined
         return token
       } catch {
-        // TODO: 백엔드 에러 코드가 정리되면 세분화해서 로그인 실패 화면/토스트에 연결해주세요.
         token.authError = "BACKEND_SOCIAL_LOGIN_FAILED"
         return token
       }
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken
-      session.refreshToken = token.refreshToken
       session.onboardingRequired = token.onboardingRequired
-      session.tempToken = token.tempToken
       session.authError = token.authError
 
       if (token.appUser) {

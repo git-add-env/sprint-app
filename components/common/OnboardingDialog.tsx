@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { MessageSquareIcon, PlusIcon, UsersIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -23,27 +23,84 @@ type OnboardingDialogProps = {
   showTrigger?: boolean
 }
 
-const jobs = ["프론트엔드 개발자", "백엔드 개발자", "풀스택 개발자", "디자이너", "기획자", "PM"]
-const careers = ["신입", "1-3년", "4-6년", "7년 이상"]
-const skills = [
+const JOBS = [
+  "프론트엔드 개발자",
+  "백엔드 개발자",
+  "풀스택 개발자",
+  "모바일 앱 개발자",
+  "iOS 개발자",
+  "Android 개발자",
+  "데브옵스 엔지니어",
+  "인프라 엔지니어",
+  "클라우드 엔지니어",
+  "데이터 엔지니어",
+  "데이터 분석가",
+  "AI 엔지니어",
+  "머신러닝 엔지니어",
+  "게임 개발자",
+  "보안 엔지니어",
+  "QA 엔지니어",
+  "임베디드 개발자",
+  "블록체인 개발자",
+  "UI/UX 디자이너",
+  "프로덕트 디자이너",
+  "기획자",
+  "프로덕트 매니저",
+  "프로젝트 매니저",
+  "학생",
+  "취업 준비생",
+  "기타",
+]
+
+const CAREERS = [
+  "학생",
+  "취업 준비생",
+  "신입",
+  "1~3년",
+  "4~6년",
+  "7~9년",
+  "10년 이상",
+]
+
+const TECH_STACKS = [
+  "HTML",
+  "CSS",
   "JavaScript",
   "TypeScript",
   "React",
   "Next.js",
+  "Vue",
+  "Nuxt",
+  "Svelte",
+  "Angular",
+  "Tailwind CSS",
+  "Styled Components",
+  "Emotion",
+  "Zustand",
+  "Redux",
+  "TanStack Query",
   "Node.js",
-  "Vue.js",
+  "Express",
+  "NestJS",
+  "Spring",
+  "Spring Boot",
+  "Java",
+  "Kotlin",
   "Python",
   "Django",
-  "Java",
-  "Spring",
-  "Kotlin",
-  "Swift",
-  "Go",
-  "Flutter",
+  "FastAPI",
+  "MySQL",
+  "PostgreSQL",
+  "MongoDB",
+  "Redis",
+  "Supabase",
+  "Firebase",
   "AWS",
   "Docker",
-  "PostgreSQL",
-  "MySQL",
+  "Kubernetes",
+  "GitHub Actions",
+  "Git",
+  "Figma",
 ]
 
 function ProgressDots({ step }: { step: number }) {
@@ -54,7 +111,7 @@ function ProgressDots({ step }: { step: number }) {
           <div
             className={cn(
               "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold",
-              step === item ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+              step === item ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
             )}
           >
             {item}
@@ -80,15 +137,28 @@ export default function OnboardingDialog({
   const [job, setJob] = useState("")
   const [career, setCareer] = useState("")
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
-  const [bio, setBio] = useState("")
+  const [skillQuery, setSkillQuery] = useState("")
+  const [introduction, setIntroduction] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const requiresOnboarding = Boolean(session?.onboardingRequired)
   const controlledOpen = open ?? internalOpen
   const dialogOpen = requiresOnboarding || controlledOpen
+  const filteredSkills = useMemo(() => {
+    const query = skillQuery.trim().toLowerCase()
+    return query
+      ? TECH_STACKS.filter((skill) => skill.toLowerCase().includes(query))
+      : TECH_STACKS
+  }, [skillQuery])
 
   function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && requiresOnboarding && !previewMode) {
+      return
+    }
+
     if (!nextOpen) {
       setStep(0)
+      setErrorMessage("")
     }
 
     if (onOpenChange) {
@@ -101,7 +171,7 @@ export default function OnboardingDialog({
 
   function toggleSkill(skill: string) {
     setSelectedSkills((current) =>
-      current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill]
+      current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill],
     )
   }
 
@@ -112,19 +182,26 @@ export default function OnboardingDialog({
     }
 
     setIsSubmitting(true)
+    setErrorMessage("")
 
     try {
       const response = await fetch("/api/auth/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname, job: job || career }),
+        body: JSON.stringify({
+          nickname: nickname.trim(),
+          job,
+          career,
+          techStacks: selectedSkills,
+          introduction: introduction.trim() || null,
+        }),
       })
 
-      if (!response.ok) {
-        throw new Error("온보딩에 실패했습니다.")
-      }
-
       const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.message ?? "온보딩에 실패했습니다.")
+      }
 
       await update({
         accessToken: result.accessToken,
@@ -133,6 +210,8 @@ export default function OnboardingDialog({
 
       setStep(5)
       router.refresh()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "온보딩에 실패했습니다.")
     } finally {
       setIsSubmitting(false)
     }
@@ -150,17 +229,17 @@ export default function OnboardingDialog({
           <Button size="sm">온보딩</Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-md px-8 py-7" showCloseButton={previewMode || !requiresOnboarding}>
+      <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto px-8 py-7" showCloseButton={previewMode || !requiresOnboarding}>
         {step >= 1 && step <= 4 && <ProgressDots step={step} />}
 
         {step === 0 && (
           <div className="grid gap-8 py-8 text-center">
             <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-2xl">환영합니다! 👋</DialogTitle>
+              <DialogTitle className="text-2xl">환영합니다</DialogTitle>
               <DialogDescription>
                 간단한 정보를 입력하고
                 <br />
-                맞춤형 모임과 경험을 시작해요.
+                나에게 맞는 모임을 찾아보세요.
               </DialogDescription>
             </DialogHeader>
             <Button className="h-11" onClick={() => setStep(1)}>
@@ -173,9 +252,10 @@ export default function OnboardingDialog({
           <div className="grid gap-7 py-2">
             <DialogHeader className="items-center text-center">
               <DialogTitle className="text-xl">닉네임을 알려주세요</DialogTitle>
-              <DialogDescription>다른 사용자에게 표시될 이름이에요.</DialogDescription>
+              <DialogDescription>다른 사용자에게 표시될 이름입니다.</DialogDescription>
             </DialogHeader>
             <label className="grid gap-2 text-sm font-medium">
+              닉네임
               <input
                 value={nickname}
                 onChange={(event) => setNickname(event.target.value)}
@@ -194,19 +274,19 @@ export default function OnboardingDialog({
         {step === 2 && (
           <div className="grid gap-6 py-2">
             <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-xl">직무와 경력을 알려주세요</DialogTitle>
-              <DialogDescription>더 적합한 모임과 정보를 추천해드려요.</DialogDescription>
+              <DialogTitle className="text-xl">직종과 경력을 선택해주세요</DialogTitle>
+              <DialogDescription>관심사에 맞는 모임 추천에 활용됩니다.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
               <label className="grid gap-2 text-sm font-medium">
-                직무
+                직종
                 <select
                   value={job}
                   onChange={(event) => setJob(event.target.value)}
                   className="h-12 rounded-md border bg-background px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <option value="">직무를 선택하세요</option>
-                  {jobs.map((item) => (
+                  <option value="">직종을 선택해주세요</option>
+                  {JOBS.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -220,8 +300,8 @@ export default function OnboardingDialog({
                   onChange={(event) => setCareer(event.target.value)}
                   className="h-12 rounded-md border bg-background px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <option value="">경력을 선택하세요</option>
-                  {careers.map((item) => (
+                  <option value="">경력을 선택해주세요</option>
+                  {CAREERS.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -239,18 +319,16 @@ export default function OnboardingDialog({
           <div className="grid gap-5 py-2">
             <DialogHeader className="items-center text-center">
               <DialogTitle className="text-xl">기술 스택을 선택해주세요</DialogTitle>
-              <DialogDescription>
-                관심 있는 기술을 선택하면
-                <br />
-                맞춤형 모임과 정보를 추천해드려요.
-              </DialogDescription>
+              <DialogDescription>하나 이상 선택하면 더 정확하게 추천할 수 있습니다.</DialogDescription>
             </DialogHeader>
             <input
-              placeholder="기술을 검색하세요"
+              value={skillQuery}
+              onChange={(event) => setSkillQuery(event.target.value)}
+              placeholder="기술 스택 검색"
               className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
-            <div className="grid grid-cols-3 gap-2">
-              {skills.map((skill) => {
+            <div className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto pr-1">
+              {filteredSkills.map((skill) => {
                 const selected = selectedSkills.includes(skill)
 
                 return (
@@ -259,10 +337,10 @@ export default function OnboardingDialog({
                     type="button"
                     onClick={() => toggleSkill(skill)}
                     className={cn(
-                      "h-9 cursor-pointer rounded-md border px-2 text-xs font-medium transition-colors",
+                      "min-h-9 cursor-pointer rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                       selected
                         ? "border-foreground bg-foreground text-background"
-                        : "bg-background hover:bg-muted"
+                        : "bg-background hover:bg-muted",
                     )}
                   >
                     {skill}
@@ -270,7 +348,7 @@ export default function OnboardingDialog({
                 )
               })}
             </div>
-            <p className="text-xs text-muted-foreground">복수 선택 가능</p>
+            <p className="text-xs text-muted-foreground">{selectedSkills.length}개 선택됨</p>
             <Button className="h-11" onClick={() => setStep(4)} disabled={selectedSkills.length === 0}>
               다음
             </Button>
@@ -280,23 +358,23 @@ export default function OnboardingDialog({
         {step === 4 && (
           <div className="grid gap-6 py-2">
             <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-xl">간단한 소개를 남겨주세요 <span className="text-muted-foreground">(선택)</span></DialogTitle>
-              <DialogDescription>관심사나 한 줄 소개를 남겨보세요.</DialogDescription>
+              <DialogTitle className="text-xl">
+                간단한 소개를 남겨주세요 <span className="text-muted-foreground">(선택)</span>
+              </DialogTitle>
+              <DialogDescription>관심사나 목표를 짧게 적어보세요.</DialogDescription>
             </DialogHeader>
             <label className="grid gap-2">
               <textarea
-                value={bio}
-                onChange={(event) => setBio(event.target.value.slice(0, 200))}
-                placeholder="자기소개를 입력해주세요 (선택)"
+                value={introduction}
+                onChange={(event) => setIntroduction(event.target.value.slice(0, 200))}
+                placeholder="자기소개를 입력해주세요"
                 className="min-h-32 resize-none rounded-md border bg-background p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <span className="text-right text-xs text-muted-foreground">{bio.length}/200</span>
+              <span className="text-right text-xs text-muted-foreground">{introduction.length}/200</span>
             </label>
+            {errorMessage && <p className="text-sm font-medium text-destructive">{errorMessage}</p>}
             <Button className="h-11" onClick={completeOnboarding} disabled={isSubmitting}>
-              {isSubmitting ? "저장 중..." : "완료"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={completeOnboarding} disabled={isSubmitting}>
-              건너뛰기
+              {isSubmitting ? "처리 중..." : "완료"}
             </Button>
           </div>
         )}
@@ -304,21 +382,27 @@ export default function OnboardingDialog({
         {step === 5 && (
           <div className="grid gap-8 py-8 text-center">
             <DialogHeader className="items-center text-center">
-              <DialogTitle className="text-2xl">회원가입이 완료되었어요! 🎉</DialogTitle>
-              <DialogDescription>이제 모임을 만들거나 참여해보세요.</DialogDescription>
+              <DialogTitle className="text-2xl">회원가입이 완료되었습니다</DialogTitle>
+              <DialogDescription>이제 모임을 만들거나 참여할 수 있습니다.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-3 gap-3 text-xs font-medium">
               <div className="grid gap-2">
                 <UsersIcon className="mx-auto size-8 rounded-full bg-muted p-1.5" />
-                관심사에 맞는<br />모임 찾기
+                관심사에 맞는
+                <br />
+                모임 찾기
               </div>
               <div className="grid gap-2">
                 <PlusIcon className="mx-auto size-8 rounded-full bg-muted p-1.5" />
-                나만의 모임<br />만들기
+                나만의 모임
+                <br />
+                만들기
               </div>
               <div className="grid gap-2">
                 <MessageSquareIcon className="mx-auto size-8 rounded-full bg-muted p-1.5" />
-                개발자들과<br />소통하기
+                개발자들과
+                <br />
+                소통하기
               </div>
             </div>
             <Button className="h-11" onClick={startApp}>

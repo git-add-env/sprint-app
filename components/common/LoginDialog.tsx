@@ -66,9 +66,7 @@ export default function LoginDialog() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>로그인</DialogTitle>
-            <DialogDescription>
-              소셜 계정으로 모임찾기를 시작하세요.
-            </DialogDescription>
+            <DialogDescription>소셜 계정으로 모임찾기를 시작하세요.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
@@ -98,7 +96,7 @@ export default function LoginDialog() {
               className="mt-1 h-10"
               onClick={openOnboardingPreview}
             >
-              온보딩 테스트
+              온보딩 미리보기
             </Button>
           </div>
         </DialogContent>
