@@ -3,6 +3,8 @@ import { Geist_Mono, Inter } from "next/font/google"
 import "./globals.css"
 import Header from "@/components/common/Header"
 import { AuthProvider } from "@/components/providers/auth-provider"
+import { QueryProvider } from "@/components/providers/query-provider"
+import { ToastProvider } from "@/components/providers/toast-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
@@ -26,12 +28,16 @@ export default function RootLayout({
     >
       <body>
         <AuthProvider>
-          <ThemeProvider>
-            <div className="flex min-h-svh flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-            </div>
-          </ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider>
+              <ToastProvider>
+                <div className="flex min-h-svh flex-col">
+                  <Header />
+                  <main className="flex-1">{children}</main>
+                </div>
+              </ToastProvider>
+            </ThemeProvider>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

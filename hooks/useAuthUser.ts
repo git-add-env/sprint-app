@@ -1,20 +1,23 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect } from "react"
 import { useSession } from "next-auth/react"
+import { useQueryClient } from "@tanstack/react-query"
 
+import { queryKeys } from "@/hooks/api/query-keys"
+import { useAuthUserQuery } from "@/hooks/auth/use-auth-user-query"
 import type { AppUser } from "@/lib/auth/backend"
-import { getAuthUser, refreshAccessToken } from "@/lib/auth/user"
+import { refreshAccessToken } from "@/lib/auth/user"
 import { useAuthStore } from "@/stores/auth-store"
 
 export function useAuthUser() {
   const { data: session, status, update } = useSession()
+  const queryClient = useQueryClient()
   const storeUser = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
   const clearUser = useAuthStore((state) => state.clearUser)
-  const [isFetchingUser, setIsFetchingUser] = useState(false)
-  const [userError, setUserError] = useState<unknown>(null)
-  const user = (storeUser ?? session?.user ?? null) as AppUser | null
+  const userQuery = useAuthUserQuery()
+  const user = (userQuery.data ?? storeUser ?? session?.user ?? null) as AppUser | null
   const onboardingRequired = session?.onboardingRequired ?? false
 
   const refetchUser = useCallback(async () => {
@@ -22,20 +25,9 @@ export function useAuthUser() {
       return null
     }
 
-    setIsFetchingUser(true)
-    setUserError(null)
-
-    try {
-      const nextUser = await getAuthUser()
-      setUser(nextUser)
-      return nextUser
-    } catch (error) {
-      setUserError(error)
-      return null
-    } finally {
-      setIsFetchingUser(false)
-    }
-  }, [onboardingRequired, session?.accessToken, setUser, status])
+    const result = await userQuery.refetch()
+    return result.data ?? null
+  }, [onboardingRequired, session?.accessToken, status, userQuery])
 
   const refreshSessionAccessToken = useCallback(async () => {
     const refreshed = await refreshAccessToken()
@@ -46,24 +38,28 @@ export function useAuthUser() {
   useEffect(() => {
     if (status === "unauthenticated") {
       clearUser()
+      queryClient.removeQueries({ queryKey: queryKeys.auth.me })
       return
     }
 
-    void Promise.resolve().then(refetchUser)
-  }, [clearUser, refetchUser, status])
+    if (userQuery.data) {
+      setUser(userQuery.data)
+    }
+  }, [clearUser, queryClient, setUser, status, userQuery.data])
 
   return {
     user,
     accessToken: session?.accessToken,
     status,
-    isLoading: status === "loading" || isFetchingUser,
-    isFetchingUser,
+    isLoading: status === "loading" || userQuery.isLoading,
+    isFetchingUser: userQuery.isFetching,
     isAuthenticated: status === "authenticated" && !!user,
     onboardingRequired,
     authError: session?.authError,
-    userError,
+    userError: userQuery.error,
     refetchUser,
     refreshAccessToken: refreshSessionAccessToken,
     updateSession: update,
+    userQuery,
   }
 }

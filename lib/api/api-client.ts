@@ -5,7 +5,7 @@ import { ApiFetchError, apiFetch } from "@/lib/api/api-fetch"
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
 const REFRESH_PATH = "/api/auth/refresh"
 
-type ApiClientOptions = RequestInit & {
+export type ApiClientOptions = RequestInit & {
   auth?: boolean
 }
 

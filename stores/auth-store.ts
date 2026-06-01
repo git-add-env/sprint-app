@@ -1,6 +1,5 @@
-import { create } from "zustand"
-
 import type { AppUser } from "@/lib/auth/backend"
+import { createAppStore } from "@/stores/create-store"
 
 type AuthState = {
   user: AppUser | null
@@ -8,7 +7,7 @@ type AuthState = {
   clearUser: () => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = createAppStore<AuthState>("auth-store", (set) => ({
   user: null,
   setUser: (user) => set({ user }),
   clearUser: () => set({ user: null }),

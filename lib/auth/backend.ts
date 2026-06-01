@@ -35,20 +35,13 @@ export type ExistingMemberResponse = {
 export type OnboardingRequiredResponse = {
   authStatus: "ONBOARDING_REQUIRED"
   isNewUser: true
-  tempToken: string
-  socialUser: {
-    provider: SocialProvider
-    providerId: string
-    email: string
-    name?: string | null
-    image?: string | null
-  }
+  accessToken: string
+  user: AppUser
 }
 
 export type SocialLoginResponse = ExistingMemberResponse | OnboardingRequiredResponse
 
 export type CompleteOnboardingPayload = {
-  tempToken: string
   nickname: string
   job: string
   career: string
@@ -59,7 +52,7 @@ export type CompleteOnboardingPayload = {
 export type CompleteOnboardingResponse = {
   authStatus: "LOGIN_SUCCESS"
   isNewUser: true
-  accessToken: string
+  accessToken?: string
   user: AppUser
 }
 
@@ -99,21 +92,27 @@ export async function exchangeSocialLogin(payload: SocialLoginPayload) {
 }
 
 export async function completeSocialOnboarding(
-  tempToken: string,
-  payload: Omit<CompleteOnboardingPayload, "tempToken">,
+  accessToken: string,
+  payload: CompleteOnboardingPayload,
 ) {
   return requestBackend<CompleteOnboardingResponse>(SOCIAL_ONBOARDING_PATH, {
     method: "POST",
-    body: JSON.stringify({ tempToken, ...payload }),
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
   })
 }
 
 export async function completeSocialOnboardingWithMeta(
-  tempToken: string,
-  payload: Omit<CompleteOnboardingPayload, "tempToken">,
+  accessToken: string,
+  payload: CompleteOnboardingPayload,
 ) {
   return requestBackendWithMeta<CompleteOnboardingResponse>(SOCIAL_ONBOARDING_PATH, {
     method: "POST",
-    body: JSON.stringify({ tempToken, ...payload }),
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
   })
 }

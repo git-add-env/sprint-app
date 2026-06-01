@@ -9,6 +9,7 @@ import LoginDialog from "@/components/common/LoginDialog"
 import OnboardingDialog from "@/components/common/OnboardingDialog"
 import { useSyncAuthUser } from "@/hooks/use-sync-auth-user"
 import { logoutBackend } from "@/lib/auth/user"
+import { notify } from "@/lib/notify"
 import { cn } from "@/lib/utils"
 
 const navigationItems = [
@@ -26,8 +27,13 @@ export default function Header() {
   useSyncAuthUser()
 
   async function handleLogout() {
+    const toastId = notify.loading("로그아웃 중입니다.")
+
     try {
       await logoutBackend()
+      notify.success("로그아웃되었습니다.", { id: toastId })
+    } catch {
+      notify.warning("백엔드 로그아웃 확인은 실패했지만 세션은 종료합니다.", { id: toastId })
     } finally {
       await signOut()
     }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { MessageSquareIcon, PlusIcon, UsersIcon } from "lucide-react"
+import { ChevronDownIcon, MessageSquareIcon, PlusIcon, UsersIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 
@@ -14,6 +14,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  ONBOARDING_CAREER_OPTIONS,
+  ONBOARDING_INTRODUCTION_MAX_LENGTH,
+  ONBOARDING_JOB_OPTIONS,
+  ONBOARDING_NICKNAME_MAX_LENGTH,
+  ONBOARDING_TECH_STACK_OPTIONS,
+} from "@/constants/onboarding"
+import { notify } from "@/lib/notify"
 import { cn } from "@/lib/utils"
 
 type OnboardingDialogProps = {
@@ -22,86 +30,6 @@ type OnboardingDialogProps = {
   previewMode?: boolean
   showTrigger?: boolean
 }
-
-const JOBS = [
-  "프론트엔드 개발자",
-  "백엔드 개발자",
-  "풀스택 개발자",
-  "모바일 앱 개발자",
-  "iOS 개발자",
-  "Android 개발자",
-  "데브옵스 엔지니어",
-  "인프라 엔지니어",
-  "클라우드 엔지니어",
-  "데이터 엔지니어",
-  "데이터 분석가",
-  "AI 엔지니어",
-  "머신러닝 엔지니어",
-  "게임 개발자",
-  "보안 엔지니어",
-  "QA 엔지니어",
-  "임베디드 개발자",
-  "블록체인 개발자",
-  "UI/UX 디자이너",
-  "프로덕트 디자이너",
-  "기획자",
-  "프로덕트 매니저",
-  "프로젝트 매니저",
-  "학생",
-  "취업 준비생",
-  "기타",
-]
-
-const CAREERS = [
-  "학생",
-  "취업 준비생",
-  "신입",
-  "1~3년",
-  "4~6년",
-  "7~9년",
-  "10년 이상",
-]
-
-const TECH_STACKS = [
-  "HTML",
-  "CSS",
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Next.js",
-  "Vue",
-  "Nuxt",
-  "Svelte",
-  "Angular",
-  "Tailwind CSS",
-  "Styled Components",
-  "Emotion",
-  "Zustand",
-  "Redux",
-  "TanStack Query",
-  "Node.js",
-  "Express",
-  "NestJS",
-  "Spring",
-  "Spring Boot",
-  "Java",
-  "Kotlin",
-  "Python",
-  "Django",
-  "FastAPI",
-  "MySQL",
-  "PostgreSQL",
-  "MongoDB",
-  "Redis",
-  "Supabase",
-  "Firebase",
-  "AWS",
-  "Docker",
-  "Kubernetes",
-  "GitHub Actions",
-  "Git",
-  "Figma",
-]
 
 function ProgressDots({ step }: { step: number }) {
   return (
@@ -135,6 +63,7 @@ export default function OnboardingDialog({
   const [step, setStep] = useState(0)
   const [nickname, setNickname] = useState("")
   const [job, setJob] = useState("")
+  const [isJobDropdownOpen, setIsJobDropdownOpen] = useState(false)
   const [career, setCareer] = useState("")
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [skillQuery, setSkillQuery] = useState("")
@@ -146,9 +75,10 @@ export default function OnboardingDialog({
   const dialogOpen = requiresOnboarding || controlledOpen
   const filteredSkills = useMemo(() => {
     const query = skillQuery.trim().toLowerCase()
+
     return query
-      ? TECH_STACKS.filter((skill) => skill.toLowerCase().includes(query))
-      : TECH_STACKS
+      ? ONBOARDING_TECH_STACK_OPTIONS.filter((skill) => skill.toLowerCase().includes(query))
+      : ONBOARDING_TECH_STACK_OPTIONS
   }, [skillQuery])
 
   function handleOpenChange(nextOpen: boolean) {
@@ -159,6 +89,7 @@ export default function OnboardingDialog({
     if (!nextOpen) {
       setStep(0)
       setErrorMessage("")
+      setIsJobDropdownOpen(false)
     }
 
     if (onOpenChange) {
@@ -204,14 +135,19 @@ export default function OnboardingDialog({
       }
 
       await update({
-        accessToken: result.accessToken,
+        accessToken: result.accessToken ?? session?.accessToken,
         user: result.user,
       })
 
+      notify.success("회원가입이 완료되었습니다.", {
+        description: "이제 관심사에 맞는 모임을 찾아볼 수 있어요.",
+      })
       setStep(5)
       router.refresh()
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "온보딩에 실패했습니다.")
+      const message = error instanceof Error ? error.message : "온보딩에 실패했습니다."
+      setErrorMessage(message)
+      notify.error(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -229,7 +165,10 @@ export default function OnboardingDialog({
           <Button size="sm">온보딩</Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto px-8 py-7" showCloseButton={previewMode || !requiresOnboarding}>
+      <DialogContent
+        className="max-h-[92vh] max-w-md overflow-y-auto px-8 py-7"
+        showCloseButton={previewMode || !requiresOnboarding}
+      >
         {step >= 1 && step <= 4 && <ProgressDots step={step} />}
 
         {step === 0 && (
@@ -260,10 +199,10 @@ export default function OnboardingDialog({
                 value={nickname}
                 onChange={(event) => setNickname(event.target.value)}
                 placeholder="닉네임을 입력해주세요"
-                maxLength={20}
+                maxLength={ONBOARDING_NICKNAME_MAX_LENGTH}
                 className="h-12 rounded-md border bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <span className="text-xs font-normal text-muted-foreground">2-20자 이내</span>
+              <span className="text-xs font-normal text-muted-foreground">2-10자 이내</span>
             </label>
             <Button className="h-11" onClick={() => setStep(2)} disabled={nickname.trim().length < 2}>
               다음
@@ -275,24 +214,63 @@ export default function OnboardingDialog({
           <div className="grid gap-6 py-2">
             <DialogHeader className="items-center text-center">
               <DialogTitle className="text-xl">직종과 경력을 선택해주세요</DialogTitle>
-              <DialogDescription>관심사에 맞는 모임 추천에 활용됩니다.</DialogDescription>
+              <DialogDescription>관심사에 맞는 모임 추천에 사용합니다.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
-              <label className="grid gap-2 text-sm font-medium">
+              <div className="grid gap-2 text-sm font-medium">
                 직종
-                <select
-                  value={job}
-                  onChange={(event) => setJob(event.target.value)}
-                  className="h-12 rounded-md border bg-background px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <div
+                  className="relative"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setIsJobDropdownOpen(false)
+                    }
+                  }}
                 >
-                  <option value="">직종을 선택해주세요</option>
-                  {JOBS.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={isJobDropdownOpen}
+                    onClick={() => setIsJobDropdownOpen((open) => !open)}
+                    className="flex h-12 w-full items-center justify-between rounded-md border bg-background px-4 text-left text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className={cn(!job && "text-muted-foreground")}>
+                      {job || "직종을 선택해주세요"}
+                    </span>
+                    <ChevronDownIcon
+                      className={cn(
+                        "size-4 shrink-0 text-muted-foreground transition-transform",
+                        isJobDropdownOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  {isJobDropdownOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute top-full z-50 mt-2 grid max-h-44 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                    >
+                      {ONBOARDING_JOB_OPTIONS.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          role="option"
+                          aria-selected={job === item}
+                          onClick={() => {
+                            setJob(item)
+                            setIsJobDropdownOpen(false)
+                          }}
+                          className={cn(
+                            "cursor-pointer rounded-sm px-3 py-2 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
+                            job === item && "bg-accent text-accent-foreground",
+                          )}
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
               <label className="grid gap-2 text-sm font-medium">
                 경력
                 <select
@@ -301,7 +279,7 @@ export default function OnboardingDialog({
                   className="h-12 rounded-md border bg-background px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">경력을 선택해주세요</option>
-                  {CAREERS.map((item) => (
+                  {ONBOARDING_CAREER_OPTIONS.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -366,11 +344,15 @@ export default function OnboardingDialog({
             <label className="grid gap-2">
               <textarea
                 value={introduction}
-                onChange={(event) => setIntroduction(event.target.value.slice(0, 200))}
+                onChange={(event) =>
+                  setIntroduction(event.target.value.slice(0, ONBOARDING_INTRODUCTION_MAX_LENGTH))
+                }
                 placeholder="자기소개를 입력해주세요"
                 className="min-h-32 resize-none rounded-md border bg-background p-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <span className="text-right text-xs text-muted-foreground">{introduction.length}/200</span>
+              <span className="text-right text-xs text-muted-foreground">
+                {introduction.length}/{ONBOARDING_INTRODUCTION_MAX_LENGTH}
+              </span>
             </label>
             {errorMessage && <p className="text-sm font-medium text-destructive">{errorMessage}</p>}
             <Button className="h-11" onClick={completeOnboarding} disabled={isSubmitting}>

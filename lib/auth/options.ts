@@ -27,7 +27,6 @@ export const authOptions: NextAuthOptions = {
       if (trigger === "update" && session?.accessToken) {
         token.accessToken = session.accessToken
         token.onboardingRequired = false
-        token.tempToken = undefined
         token.appUser = session.user as AppUser
       }
 
@@ -55,17 +54,16 @@ export const authOptions: NextAuthOptions = {
           token.accessToken = result.accessToken
           token.appUser = result.user
           token.onboardingRequired = false
-          token.tempToken = undefined
           return token
         }
 
         token.onboardingRequired = true
-        token.tempToken = result.tempToken
-        token.email = result.socialUser.email
-        token.accessToken = undefined
-        token.appUser = undefined
+        token.accessToken = result.accessToken
+        token.appUser = result.user
+        token.email = result.user.email
         return token
-      } catch {
+      } catch (error) {
+        console.error("[auth] backend social login failed", error)
         token.authError = "BACKEND_SOCIAL_LOGIN_FAILED"
         return token
       }
