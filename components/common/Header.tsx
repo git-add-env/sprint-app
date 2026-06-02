@@ -1,8 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import { signOut, useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
 
+import { Button } from "@/components/ui/button"
+import LoginDialog from "@/components/common/LoginDialog"
+import OnboardingDialog from "@/components/common/OnboardingDialog"
+import { useSyncAuthUser } from "@/hooks/use-sync-auth-user"
+import { logoutBackend } from "@/lib/auth/user"
+import { notify } from "@/lib/notify"
 import { cn } from "@/lib/utils"
 
 const navigationItems = [
@@ -15,14 +22,27 @@ const navigationItems = [
 
 export default function Header() {
   const pathname = usePathname()
+  const { status } = useSession()
+
+  useSyncAuthUser()
+
+  async function handleLogout() {
+    const toastId = notify.loading("로그아웃 중입니다.")
+
+    try {
+      await logoutBackend()
+      notify.success("로그아웃되었습니다.", { id: toastId })
+    } catch {
+      notify.warning("백엔드 로그아웃 확인은 실패했지만 세션은 종료합니다.", { id: toastId })
+    } finally {
+      await signOut()
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link
-          href="/landing"
-          className="w-fit text-lg font-semibold tracking-normal text-foreground"
-        >
+        <Link href="/landing" className="w-fit text-lg font-semibold tracking-normal text-foreground">
           모임찾기
         </Link>
 
@@ -46,6 +66,17 @@ export default function Header() {
             )
           })}
         </nav>
+
+        <div className="flex items-center gap-2">
+          <OnboardingDialog showTrigger={false} />
+          {status === "authenticated" ? (
+            <Button size="sm" variant="outline" onClick={handleLogout}>
+              로그아웃
+            </Button>
+          ) : (
+            <LoginDialog />
+          )}
+        </div>
       </div>
     </header>
   )
