@@ -35,19 +35,25 @@ function getAuthErrorMessage(error: string) {
 function AuthToastEvents() {
   const { data: session, status } = useSession()
   const handledAuthErrorRef = useRef<string | null>(null)
+  const previousStatusRef = useRef(status)
 
   useEffect(() => {
+    const previousStatus = previousStatusRef.current
+    previousStatusRef.current = status
+
     if (typeof window === "undefined" || status !== "authenticated") {
       return
     }
 
     const provider = window.sessionStorage.getItem(LOGIN_PROVIDER_STORAGE_KEY)
 
-    if (!provider) {
+    if (!provider && previousStatus !== "unauthenticated") {
       return
     }
 
-    window.sessionStorage.removeItem(LOGIN_PROVIDER_STORAGE_KEY)
+    if (provider) {
+      window.sessionStorage.removeItem(LOGIN_PROVIDER_STORAGE_KEY)
+    }
 
     if (session?.authError) {
       return
@@ -91,7 +97,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <AuthToastEvents />
       <Toaster
-        richColors
         closeButton
         expand
         position="top-center"

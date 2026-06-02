@@ -22,7 +22,7 @@ const navigationItems = [
 
 export default function Header() {
   const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const { status } = useSession()
 
   useSyncAuthUser()
 
@@ -68,9 +68,8 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {session?.onboardingRequired ? (
-            <OnboardingDialog />
-          ) : status === "authenticated" ? (
+          <OnboardingDialog showTrigger={false} />
+          {status === "authenticated" ? (
             <Button size="sm" variant="outline" onClick={handleLogout}>
               로그아웃
             </Button>
