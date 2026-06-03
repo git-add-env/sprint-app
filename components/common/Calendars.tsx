@@ -12,11 +12,13 @@ type CalendarsProps = {
 }
 
 export function Calendars({ selected, onSelect }: CalendarsProps) {
-    const [mounted, setMounted] = React.useState(false)
-
-    React.useEffect(() => {
-        setMounted(true)
-    }, [])
+    // 서버(UTC)/브라우저(로컬) 시각 차이로 인한 하이드레이션 불일치 방지:
+    // 서버에서는 렌더하지 않고, 브라우저에서만 달력을 그린다.
+    const mounted = React.useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false,
+    )
 
     if (!mounted) return null
 
