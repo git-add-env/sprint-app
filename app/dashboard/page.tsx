@@ -26,11 +26,14 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
 
   useEffect(() => {
-    fetchMyMeetings()
-      .then((res) => {
-        setGroups(res.meetings)
-        if (res.meetings.length > 0) {
-          setSelectedGroupId(res.meetings[0].meetingId)
+    // 대시보드는 참여 중인 모임(모집중 + 활동중)을 함께 보여준다.
+    // 백엔드 status 필터가 한 번에 하나라 두 번 호출 후 합친다. (완료는 제외)
+    Promise.all([fetchMyMeetings("recruiting"), fetchMyMeetings("active")])
+      .then(([recruiting, active]) => {
+        const merged = [...recruiting.meetings, ...active.meetings]
+        setGroups(merged)
+        if (merged.length > 0) {
+          setSelectedGroupId(merged[0].meetingId)
         }
       })
       .catch(() => setGroupsError("참여중인 모임을 불러오지 못했습니다."))
