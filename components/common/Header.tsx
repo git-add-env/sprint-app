@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import LoginDialog from "@/components/common/LoginDialog"
 import OnboardingDialog from "@/components/common/OnboardingDialog"
 import { useSyncAuthUser } from "@/hooks/use-sync-auth-user"
+import { logoutBackend } from "@/lib/auth/user"
+import { notify } from "@/lib/notify"
 import { cn } from "@/lib/utils"
 
 const navigationItems = [
@@ -20,9 +22,22 @@ const navigationItems = [
 
 export default function Header() {
   const pathname = usePathname()
-  const { data: session, status } = useSession()
+  const { status } = useSession()
 
   useSyncAuthUser()
+
+  async function handleLogout() {
+    const toastId = notify.loading("로그아웃 중입니다.")
+
+    try {
+      await logoutBackend()
+      notify.success("로그아웃되었습니다.", { id: toastId })
+    } catch {
+      notify.warning("백엔드 로그아웃 확인은 실패했지만 세션은 종료합니다.", { id: toastId })
+    } finally {
+      await signOut()
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
@@ -53,10 +68,9 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {session?.onboardingRequired ? (
-            <OnboardingDialog />
-          ) : status === "authenticated" ? (
-            <Button size="sm" variant="outline" onClick={() => signOut()}>
+          <OnboardingDialog showTrigger={false} />
+          {status === "authenticated" ? (
+            <Button size="sm" variant="outline" onClick={handleLogout}>
               로그아웃
             </Button>
           ) : (

@@ -1,115 +1,105 @@
+"use client"
+
+import Image from "next/image"
+import { Users } from "lucide-react"
+
+import { PositionJobCountBadges } from "@/components/common/Badges"
+import { BookMarkBtn } from "@/components/common/BookMarkBtn"
+import { MemberCountBar } from "@/components/common/MemberCountBar"
 import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+  CategoryBadge,
+  TechStackBadges,
+  TodayDeadlineBadge,
+} from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 
-import { Badge } from "@/components/ui/badge";
+export type Meeting = {
+  id: string
+  title: string
+  date: string
+  deadline: string
+  status: "개설확정" | "모집중" | "마감"
+  category: string
+  memberCount: number
+  maxMembers: number
+  techStacks?: string[]
+  jobs?: { job: string; current: number; max: number }[]
+  imageUrl: string
+  isBookmarked?: boolean
+  isClosingToday?: boolean
+}
 
-import { Button } from "@/components/ui/button";
+type MeetingCardProps = {
+  meeting: Meeting
+}
 
-import { Progress } from "@/components/ui/progress";
-
-import {
-  Heart,
-  Clock3,
-  User,
-  CheckCircle2,
-} from "lucide-react";
-
-export default function MeetingCard() {
+export default function MeetingCard({ meeting }: MeetingCardProps) {
   return (
-    <Card className="w-[520px] rounded-2xl border-0 bg-[#f9f9f9] p-3 shadow-none">
-      <CardContent className="flex items-center gap-3 p-0">
+    <Card className="min-h-[472px] gap-0 overflow-hidden rounded-xl border border-[#c3c6d7] bg-white py-0 shadow-none transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="relative h-48 w-full overflow-hidden bg-[#e6e8ea]">
+        <Image
+          src={meeting.imageUrl}
+          alt={meeting.title}
+          fill
+          sizes="(min-width: 1280px) 384px, (min-width: 768px) 50vw, 100vw"
+          className="object-cover"
+        />
+        {meeting.isClosingToday ? (
+          <TodayDeadlineBadge className="absolute bottom-4 left-4" />
+        ) : null}
+        <BookMarkBtn
+          initialBookmarked={meeting.isBookmarked}
+          className="absolute right-4 top-4 size-9 bg-white/80 p-2 shadow-sm backdrop-blur-md hover:bg-white"
+          iconClassName="size-4"
+        />
+      </div>
 
-        {/* 이미지 */}
-        <div className="h-[110px] w-[110px] overflow-hidden rounded-2xl">
-          <img
-            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb"
-            alt="모임 이미지"
-            className="h-full w-full object-cover"
+      <CardContent className="flex flex-1 flex-col gap-4 p-6">
+        <div className="flex flex-col gap-1">
+          <CategoryBadge
+            category={meeting.category}
+            className="h-5 px-2.5 text-xs font-medium"
           />
+          <h3 className="line-clamp-2 min-h-7 pt-1 text-xl font-medium leading-7 text-[#191c1e]">
+            {meeting.title}
+          </h3>
+          {meeting.techStacks?.length ? (
+            <TechStackBadges
+              techStacks={meeting.techStacks}
+              className="pt-1"
+            />
+          ) : null}
         </div>
 
-        {/* 오른쪽 영역 */}
-        <div className="flex flex-1 flex-col justify-between self-stretch">
-
-          {/* 상단 */}
-          <div className="flex items-start justify-between">
-            <div>
-
-              {/* 제목 + 상태 */}
-              <div className="flex items-center gap-1">
-                <h2 className="text-base font-bold">
-                  개발자 네트워킹 모임
-                </h2>
-
-                <CheckCircle2
-                  className="text-emerald-400"
-                  size={14}
-                />
-
-                <span className="text-xs font-medium text-emerald-400">
-                  개설확정
-                </span>
-              </div>
-
-              {/* 날짜 / 마감 */}
-              <div className="mt-2 flex items-center gap-1">
-                <Badge
-                  variant="secondary"
-                  className="rounded-full px-2 py-0.5 text-[10px]"
-                >
-                  5월 18일
-                </Badge>
-
-                <Badge
-                  className="flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] text-sky-600"
-                >
-                  <Clock3 size={10} />
-                  오늘 마감
-                </Badge>
-              </div>
+        <div className="flex flex-col gap-3 pt-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-[#191c1e]">
+              <Users className="size-3.5 text-[#434655]" aria-hidden="true" />
+              <span>모집 현황</span>
             </div>
-
-            {/* 찜 버튼 */}
-            <button className="flex h-8 w-8 items-center justify-center rounded-full border bg-white">
-              <Heart
-                className="text-gray-400"
-                size={14}
-              />
-            </button>
+            <MemberCountBar
+              current={meeting.memberCount}
+              max={meeting.maxMembers}
+              showUnit={false}
+              className="w-28 gap-2"
+              trackClassName="h-1.5"
+              valueClassName="min-w-7 text-right font-bold"
+            />
           </div>
 
-          {/* 하단 */}
-          <div className="mt-4 flex items-center justify-between">
-
-            {/* 인원 */}
-            <div className="flex flex-1 items-center gap-1.5">
-              <User
-                className="text-gray-400"
-                size={14}
-              />
-
-              <Progress
-                value={95}
-                className="h-1.5 w-[130px]"
-              />
-
-              <span className="text-sm font-semibold text-emerald-500">
-                19
-                <span className="text-gray-500">/20</span>
-              </span>
-            </div>
-
-            {/* 참여 버튼 */}
-            <Button
-              className="h-8 rounded-lg border border-emerald-400 bg-white px-3 text-xs font-semibold text-emerald-500 hover:bg-emerald-50"
-            >
-              참여하기
-            </Button>
-          </div>
+          {meeting.jobs?.length ? (
+            <PositionJobCountBadges
+              jobs={meeting.jobs}
+              className="flex flex-wrap gap-1.5"
+              badgeClassName="h-7 rounded-lg px-2.5 text-xs font-medium"
+            />
+          ) : null}
         </div>
+
+        <p className="mt-auto text-xs font-medium text-[#434655]">
+          마감일: {meeting.deadline}
+        </p>
       </CardContent>
     </Card>
-  );
+  )
 }

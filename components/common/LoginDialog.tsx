@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react"
 
 import { Button } from "@/components/ui/button"
 import OnboardingDialog from "@/components/common/OnboardingDialog"
+import { rememberLoginProvider } from "@/components/providers/toast-provider"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { notify } from "@/lib/notify"
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -55,6 +57,15 @@ export default function LoginDialog() {
     setOnboardingPreviewOpen(true)
   }
 
+  async function handleSocialLogin(provider: "google" | "github") {
+    try {
+      rememberLoginProvider(provider)
+      await signIn(provider)
+    } catch {
+      notify.error("소셜 로그인으로 이동하지 못했습니다.")
+    }
+  }
+
   return (
     <>
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
@@ -66,16 +77,14 @@ export default function LoginDialog() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>로그인</DialogTitle>
-            <DialogDescription>
-              소셜 계정으로 모임찾기를 시작하세요.
-            </DialogDescription>
+            <DialogDescription>소셜 계정으로 모임찾기를 시작하세요.</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
             <Button
               variant="outline"
               className="h-11 justify-start gap-3 px-4"
-              onClick={() => signIn("google")}
+              onClick={() => handleSocialLogin("google")}
             >
               <span className="flex size-6 items-center justify-center rounded-full bg-white shadow-xs ring-1 ring-border">
                 <GoogleIcon className="size-4" />
@@ -85,7 +94,7 @@ export default function LoginDialog() {
             <Button
               variant="outline"
               className="h-11 justify-start gap-3 px-4"
-              onClick={() => signIn("github")}
+              onClick={() => handleSocialLogin("github")}
             >
               <span className="flex size-6 items-center justify-center rounded-full bg-foreground text-background">
                 <GitHubIcon className="size-4" />
@@ -98,7 +107,7 @@ export default function LoginDialog() {
               className="mt-1 h-10"
               onClick={openOnboardingPreview}
             >
-              온보딩 테스트
+              온보딩 미리보기
             </Button>
           </div>
         </DialogContent>

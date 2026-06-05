@@ -19,3 +19,8 @@ To use the components in your app, import them as follows:
 ```tsx
 import { Button } from "@/components/ui/button";
 ```
+
+## Project Docs
+
+- [Toast Guide](docs/toast-guide.md)
+- [프론트 API 요청 / 회원 조회 가이드](docs/frontend-auth-api-guide.md)

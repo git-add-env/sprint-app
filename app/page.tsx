@@ -1,30 +1,80 @@
+"use client"
+
+import * as React from "react"
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
+
 import { Button } from "@/components/ui/button"
+import { Badges } from "@/components/common/Badges"
+import { BookMarkBtn } from "@/components/common/BookMarkBtn"
+import { Calendars } from "@/components/common/Calendars"
 import InfoCard from "@/components/common/InfoCard"
-import MeetingCard from "@/components/common/MeetingCard";
+import { MemberCountBar } from "@/components/common/MemberCountBar"
+import MeetingCard, { type Meeting } from "@/components/common/MeetingCard"
 import MeetingRecommendationCarousel from "@/components/common/MeetingRecommendationCarousel"
+import { UserAvatar } from "@/components/common/UserAvatar"
+import { VideoConference } from "@/components/dashboard/VideoConference"
+
+const sampleMeeting: Meeting = {
+  id: "sample",
+  title: "AI 기반 개인 맞춤형 일정 관리 서비스",
+  date: "2024.11.01",
+  deadline: "2024.11.30",
+  status: "모집중",
+  category: "프로젝트",
+  memberCount: 2,
+  maxMembers: 5,
+  techStacks: ["React", "TypeScript", "Node.js"],
+  jobs: [
+    { job: "프론트엔드", current: 1, max: 2 },
+    { job: "백엔드", current: 0, max: 2 },
+    { job: "PM", current: 1, max: 1 },
+  ],
+  imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
+}
 
 export default function Page() {
+  // 달력에서 선택한 날짜 상태
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined)
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="grid w-full max-w-5xl gap-6 text-sm leading-loose">
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(320px,40%)]">
-          <div className="flex min-w-0 flex-col gap-4">
-            <div>
-              <h1 className="font-medium">Project ready!</h1>
-              <p>You may now add components and start building.</p>
-              <p>We&apos;ve already added the button component for you.</p>
-              <Button className="mt-2">Button</Button>
-            </div>
-            <div className="font-mono text-xs text-muted-foreground">
-              (Press <kbd>d</kbd> to toggle dark mode)
-            </div>
+    <div className="flex min-h-svh justify-center p-6">
+      <div className="flex w-full max-w-5xl flex-col items-center gap-6 text-sm leading-loose">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-center">
+            <h1 className="font-medium">Project ready!</h1>
+            <p>You may now add components and start building.</p>
+            <p>We&apos;ve already added the button component for you.</p>
+            <Button className="mt-2">Button</Button>
+          </div>
+          <div className="font-mono text-xs text-muted-foreground">
+            (Press <kbd>d</kbd> to toggle dark mode)
           </div>
 
-          <InfoCard />
+          <div className="flex flex-col items-center"> 테스트 용
+            {/* 배지 - 오늘 마감 / 마감 / 디데이 / 모임장 배지 */}
+            <div className="flex flex-col items-center gap-8">
+              <div><Badges /></div>
+              {/* 정원 인원 바 — 현재/전체 인원 */}
+              <div className="w-64"><MemberCountBar current={4} max={6} /></div>
+              {/* 선택한 날짜 값 표시 (읽기 전용) */}
+              <input
+                type="text"
+                readOnly
+                value={selectedDate ? format(selectedDate, "yyyy-MM-dd (EEE)", { locale: ko }) : ""}
+                placeholder="날짜를 선택하세요"
+                className="w-56 rounded-md border px-3 py-2 text-center text-sm"
+              />
+              <div><Calendars selected={selectedDate} onSelect={setSelectedDate} /></div>
+              <BookMarkBtn />
+              <VideoConference />
+              <UserAvatar />
+              <InfoCard />
+            </div>
+          </div>
         </div>
 
         <InfoCard />
-        <MeetingCard/>
+        <MeetingCard meeting={sampleMeeting} />
         <MeetingRecommendationCarousel />
       </div>
     </div>

@@ -1,9 +1,16 @@
 import { getSession } from "next-auth/react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
+import { ApiFetchError, apiFetch } from "@/lib/api/api-fetch"
 
-type ApiClientOptions = RequestInit & {
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL
+const REFRESH_PATH = "/api/auth/refresh"
+
+export type ApiClientOptions = RequestInit & {
   auth?: boolean
+}
+
+type RefreshResponse = {
+  accessToken: string
 }
 
 export async function apiClient<TResponse>(
@@ -15,25 +22,30 @@ export async function apiClient<TResponse>(
   }
 
   const session = auth ? await getSession() : null
-  const accessToken = session?.accessToken
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
-  })
+  try {
+    return await apiFetch<TResponse>(path, {
+      ...init,
+      baseUrl: API_BASE_URL,
+      token: session?.accessToken,
+      headers,
+    })
+  } catch (error) {
+    if (!(error instanceof ApiFetchError) || error.status !== 401 || !auth || path === REFRESH_PATH) {
+      throw error
+    }
 
-  if (!response.ok) {
-    // TODO: 백엔드 공통 에러 응답 형식이 정해지면 커스텀 ApiError로 status/code/message를 보존하세요.
-    throw new Error(`API request failed: ${response.status}`)
+    const refreshed = await apiFetch<RefreshResponse>(REFRESH_PATH, {
+      method: "POST",
+      baseUrl: API_BASE_URL,
+      credentials: "include",
+    })
+
+    return apiFetch<TResponse>(path, {
+      ...init,
+      baseUrl: API_BASE_URL,
+      token: refreshed.accessToken,
+      headers,
+    })
   }
-
-  if (response.status === 204) {
-    return undefined as TResponse
-  }
-
-  return response.json() as Promise<TResponse>
 }
