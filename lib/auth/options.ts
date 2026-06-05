@@ -45,10 +45,6 @@ export const authOptions: NextAuthOptions = {
       name: "Test Login",
       credentials: {},
       async authorize() {
-        if (process.env.NODE_ENV === "production") {
-          return null
-        }
-
         const result = await exchangeSocialLogin(TEST_LOGIN_PAYLOAD)
 
         return {
