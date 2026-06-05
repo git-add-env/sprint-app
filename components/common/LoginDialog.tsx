@@ -54,7 +54,6 @@ export default function LoginDialog() {
   const [loginOpen, setLoginOpen] = useState(false)
   const [onboardingPreviewOpen, setOnboardingPreviewOpen] = useState(false)
   const [testLoginLoading, setTestLoginLoading] = useState(false)
-  const testLoginEnabled = process.env.NODE_ENV !== "production"
 
   function openOnboardingPreview() {
     setLoginOpen(false)
@@ -141,16 +140,14 @@ export default function LoginDialog() {
           </DialogContent>
         </Dialog>
 
-        {testLoginEnabled ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleTestLogin}
-            disabled={testLoginLoading}
-          >
-            {testLoginLoading ? "로그인 중" : "테스트 로그인"}
-          </Button>
-        ) : null}
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={handleTestLogin}
+          disabled={testLoginLoading}
+        >
+          {testLoginLoading ? "로그인 중" : "테스트 로그인"}
+        </Button>
       </div>
 
       <OnboardingDialog
