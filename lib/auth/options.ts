@@ -27,18 +27,22 @@ function isTestLoginUser(user: User): user is TestLoginUser {
   return "accessToken" in user && "appUser" in user && "onboardingRequired" in user
 }
 
+function getEnvValue(...keys: string[]) {
+  return keys.map((key) => process.env[key]).find((value) => value) ?? ""
+}
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      clientId: getEnvValue("GOOGLE_CLIENT_ID", "AUTH_GOOGLE_ID", "GOOGLE_ID"),
+      clientSecret: getEnvValue("GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_SECRET", "GOOGLE_SECRET"),
     }),
     GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: getEnvValue("GITHUB_CLIENT_ID", "AUTH_GITHUB_ID", "GITHUB_ID"),
+      clientSecret: getEnvValue("GITHUB_CLIENT_SECRET", "AUTH_GITHUB_SECRET", "GITHUB_SECRET"),
     }),
     CredentialsProvider({
       id: "test-login",
