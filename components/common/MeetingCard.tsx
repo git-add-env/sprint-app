@@ -31,9 +31,14 @@ export type Meeting = {
 
 type MeetingCardProps = {
   meeting: Meeting
+  onBookmarkToggle?: (meetingId: string, bookmarked: boolean) => void
 }
 
-export default function MeetingCard({ meeting }: MeetingCardProps) {
+export default function MeetingCard({ meeting, onBookmarkToggle }: MeetingCardProps) {
+  function handleBookmarkToggle(bookmarked: boolean) {
+    onBookmarkToggle?.(meeting.id, bookmarked)
+  }
+
   return (
     <Card className="min-h-[472px] gap-0 overflow-hidden rounded-xl border border-[#c3c6d7] bg-white py-0 shadow-none transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="relative h-48 w-full overflow-hidden bg-[#e6e8ea]">
@@ -48,9 +53,9 @@ export default function MeetingCard({ meeting }: MeetingCardProps) {
           <TodayDeadlineBadge className="absolute bottom-4 left-4" />
         ) : null}
         <BookMarkBtn
-          initialBookmarked={meeting.isBookmarked}
+          bookmarked={meeting.isBookmarked}
+          onToggle={handleBookmarkToggle}
           className="absolute right-4 top-4 size-9 bg-white/80 p-2 shadow-sm backdrop-blur-md hover:bg-white"
-          iconClassName="size-4"
         />
       </div>
 

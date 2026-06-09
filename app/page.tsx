@@ -10,28 +10,11 @@ import { BookMarkBtn } from "@/components/common/BookMarkBtn"
 import { Calendars } from "@/components/common/Calendars"
 import InfoCard from "@/components/common/InfoCard"
 import { MemberCountBar } from "@/components/common/MemberCountBar"
-import MeetingCard, { type Meeting } from "@/components/common/MeetingCard"
 import MeetingRecommendationCarousel from "@/components/common/MeetingRecommendationCarousel"
 import { UserAvatar } from "@/components/common/UserAvatar"
+import { TimePicker } from "@/components/common/TimePicker"
 import { VideoConference } from "@/components/dashboard/VideoConference"
 
-const sampleMeeting: Meeting = {
-  id: "sample",
-  title: "AI 기반 개인 맞춤형 일정 관리 서비스",
-  date: "2024.11.01",
-  deadline: "2024.11.30",
-  status: "모집중",
-  category: "프로젝트",
-  memberCount: 2,
-  maxMembers: 5,
-  techStacks: ["React", "TypeScript", "Node.js"],
-  jobs: [
-    { job: "프론트엔드", current: 1, max: 2 },
-    { job: "백엔드", current: 0, max: 2 },
-    { job: "PM", current: 1, max: 1 },
-  ],
-  imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-}
 
 export default function Page() {
   // 달력에서 선택한 날짜 상태
@@ -65,6 +48,7 @@ export default function Page() {
                 className="w-56 rounded-md border px-3 py-2 text-center text-sm"
               />
               <div><Calendars selected={selectedDate} onSelect={setSelectedDate} /></div>
+              <TimePicker />
               <BookMarkBtn />
               <VideoConference />
               <UserAvatar />
@@ -74,7 +58,6 @@ export default function Page() {
         </div>
 
         <InfoCard />
-        <MeetingCard meeting={sampleMeeting} />
         <MeetingRecommendationCarousel />
       </div>
     </div>

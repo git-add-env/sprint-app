@@ -25,7 +25,6 @@ const MEETINGS: Meeting[] = [
       { job: "디자이너", current: 0, max: 1 },
     ],
     imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-    isBookmarked: true,
   },
   {
     id: "2",
@@ -43,7 +42,6 @@ const MEETINGS: Meeting[] = [
       { job: "PM", current: 0, max: 1 },
     ],
     imageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71",
-    isBookmarked: true,
     isClosingToday: true,
   },
   {
@@ -62,7 +60,6 @@ const MEETINGS: Meeting[] = [
       { job: "데이터 엔지니어", current: 1, max: 1 },
     ],
     imageUrl: "https://images.unsplash.com/photo-1518005020951-eccb494ad742",
-    isBookmarked: true,
   },
 ]
 
@@ -70,6 +67,9 @@ export default function MeetingsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("전체")
   const [sortOrder, setSortOrder] = useState("최신순")
+  const [bookmarkedMeetingIds, setBookmarkedMeetingIds] = useState<Set<string>>(
+    () => new Set(MEETINGS.filter((meeting) => meeting.isBookmarked).map((meeting) => meeting.id)),
+  )
 
   const categories = ["전체", "프로젝트", "해커톤", "공모전"]
 
@@ -89,6 +89,20 @@ export default function MeetingsPage() {
 
     return searchMatch && categoryMatch
   })
+
+  function handleBookmarkToggle(meetingId: string, bookmarked: boolean) {
+    setBookmarkedMeetingIds((prev) => {
+      const next = new Set(prev)
+
+      if (bookmarked) {
+        next.add(meetingId)
+      } else {
+        next.delete(meetingId)
+      }
+
+      return next
+    })
+  }
 
   return (
     <main className="min-h-screen bg-[#f7f9fb] px-4 py-10 sm:px-6 lg:px-12">
@@ -173,9 +187,17 @@ export default function MeetingsPage() {
         <section>
           {filteredMeetings.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filteredMeetings.map((meeting) => (
-                <MeetingCard key={meeting.id} meeting={meeting} />
-              ))}
+              {filteredMeetings.map((meeting) => {
+                const isBookmarked = bookmarkedMeetingIds.has(meeting.id)
+
+                return (
+                  <MeetingCard
+                    key={meeting.id}
+                    meeting={{ ...meeting, isBookmarked }}
+                    onBookmarkToggle={handleBookmarkToggle}
+                  />
+                )
+              })}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-[#c3c6d7] bg-white p-12 text-center text-[#565e74]">
