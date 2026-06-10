@@ -1,121 +1,111 @@
 "use client"
 
-import { useState, type ChangeEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import { ChevronDown, LoaderCircle, Search } from "lucide-react"
 
 import MeetingCard, { type Meeting } from "@/components/common/MeetingCard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CATEGORY_LABEL } from "@/constants/category"
+import { queryKeys } from "@/hooks/api/query-keys"
+import {
+  fetchMeetings,
+  type MeetingListParams,
+  type MeetingSummary,
+} from "@/lib/api/meetings"
 
-const MEETINGS: Meeting[] = [
-  {
-    id: "1",
-    title: "AI 기반 개인 맞춤형 일정 관리 서비스",
-    date: "2026.07.01",
-    deadline: "2026.07.30",
-    status: "모집중",
-    category: "프로젝트",
-    memberCount: 2,
-    maxMembers: 6,
-    techStacks: ["React", "TypeScript", "Node.js"],
-    jobs: [
-      { job: "프론트엔드", current: 1, max: 2 },
-      { job: "백엔드", current: 0, max: 2 },
-      { job: "PM", current: 1, max: 1 },
-      { job: "디자이너", current: 0, max: 1 },
-    ],
-    imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-  },
-  {
-    id: "2",
-    title: "2026 글로벌 핀테크 챌린지 팀 빌딩",
-    date: "2026.06.20",
-    deadline: "2026.06.05",
-    status: "마감",
-    category: "해커톤",
-    memberCount: 3,
-    maxMembers: 7,
-    techStacks: ["Next.js", "Spring Boot", "AWS"],
-    jobs: [
-      { job: "프론트엔드", current: 2, max: 3 },
-      { job: "백엔드", current: 1, max: 3 },
-      { job: "PM", current: 0, max: 1 },
-    ],
-    imageUrl: "https://images.unsplash.com/photo-1551288049-bebda4e38f71",
-    isClosingToday: true,
-  },
-  {
-    id: "3",
-    title: "공공 데이터 활용 창업 경진대회",
-    date: "2026.06.21",
-    deadline: "2026.06.12",
-    status: "모집중",
-    category: "공모전",
-    memberCount: 2,
-    maxMembers: 4,
-    techStacks: ["Figma", "React", "Spring"],
-    jobs: [
-      { job: "프론트엔드", current: 0, max: 1 },
-      { job: "백엔드", current: 1, max: 2 },
-      { job: "데이터 엔지니어", current: 1, max: 1 },
-    ],
-    imageUrl: "https://images.unsplash.com/photo-1518005020951-eccb494ad742",
-  },
-]
+const FALLBACK_MEETING_IMAGE_URL = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3"
+const CATEGORY_QUERY_VALUE: Record<string, string> = {
+  전체: "ALL",
+  프로젝트: "PROJECT",
+  해커톤: "HACKATHON",
+  공모전: "CONTEST",
+}
+const SORT_QUERY_VALUE: Record<string, string> = {
+  최신순: "latest",
+  인기순: "popular",
+  마감순: "deadline",
+}
 
 export default function MeetingsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("전체")
   const [sortOrder, setSortOrder] = useState("최신순")
-  const [bookmarkedMeetingIds, setBookmarkedMeetingIds] = useState<Set<string>>(
-    () => new Set(MEETINGS.filter((meeting) => meeting.isBookmarked).map((meeting) => meeting.id)),
-  )
+  const [bookmarkOverrides, setBookmarkOverrides] = useState<Record<string, boolean>>({})
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const categories = ["전체", "프로젝트", "해커톤", "공모전"]
-
-  const filteredMeetings = MEETINGS.filter((meeting) => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-    const searchableText = [
-      meeting.title,
-      meeting.category,
-      ...(meeting.techStacks ?? []),
-    ].join(" ")
-    const searchMatch = normalizedQuery
-      ? searchableText.toLowerCase().includes(normalizedQuery)
-      : true
-    const categoryMatch = selectedCategory === "전체"
-      ? true
-      : meeting.category === selectedCategory
-
-    return searchMatch && categoryMatch
+  const listParams = useMemo(
+    () => getMeetingListParams(searchQuery, selectedCategory, sortOrder),
+    [searchQuery, selectedCategory, sortOrder],
+  )
+  const {
+    data,
+    isError,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    error,
+    refetch,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: [...queryKeys.meetings.list, listParams],
+    initialPageParam: null as number | null,
+    queryFn: ({ pageParam }) =>
+      fetchMeetings({
+        ...listParams,
+        cursor: pageParam,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNext && lastPage.nextCursor !== null ? lastPage.nextCursor : undefined,
   })
+  const meetings = useMemo(
+    () =>
+      (data?.pages.flatMap((page) => page.meetings) ?? []).map(
+        mapMeetingSummaryToCardMeeting,
+      ),
+    [data?.pages],
+  )
+
+  useEffect(() => {
+    const target = loadMoreRef.current
+
+    if (!target || !hasNextPage || isFetchingNextPage) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: "240px" },
+    )
+
+    observer.observe(target)
+
+    return () => observer.disconnect()
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
 
   function handleBookmarkToggle(meetingId: string, bookmarked: boolean) {
-    setBookmarkedMeetingIds((prev) => {
-      const next = new Set(prev)
-
-      if (bookmarked) {
-        next.add(meetingId)
-      } else {
-        next.delete(meetingId)
-      }
-
-      return next
-    })
+    setBookmarkOverrides((prev) => ({ ...prev, [meetingId]: bookmarked }))
   }
 
   return (
     <main className="min-h-screen bg-[#f7f9fb] px-4 py-10 sm:px-6 lg:px-12">
       <div className="mx-auto flex max-w-[1184px] flex-col gap-8">
         <section className="flex flex-col gap-6">
-          {/* <div>
+          <div>
             <h1 className="text-[32px] font-medium leading-10 tracking-normal text-[#191c1e]">
               함께 성장할 팀원을 찾아보세요
             </h1>
             <p className="mt-1 text-lg leading-7 text-[#434655]">
               당신의 열정을 함께 나눌 프로젝트와 동료들이 기다리고 있습니다.
             </p>
-          </div> */}
+          </div>
 
           <div className="flex flex-col gap-6 rounded-xl border border-[#c3c6d7] bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -185,35 +175,125 @@ export default function MeetingsPage() {
         </section>
 
         <section>
-          {filteredMeetings.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filteredMeetings.map((meeting) => {
-                const isBookmarked = bookmarkedMeetingIds.has(meeting.id)
-
-                return (
-                  <MeetingCard
-                    key={meeting.id}
-                    meeting={{ ...meeting, isBookmarked }}
-                    onBookmarkToggle={handleBookmarkToggle}
-                  />
-                )
-              })}
+          {isError ? (
+            <div className="rounded-xl border border-dashed border-[#c3c6d7] bg-white p-12 text-center text-[#565e74]">
+              <p>모임 목록을 불러오지 못했습니다.</p>
+              <p className="mt-1 text-sm">{error.message}</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => refetch()}
+                className="mt-4"
+              >
+                다시 불러오기
+              </Button>
             </div>
+          ) : isLoading ? (
+            <LoadingState />
+          ) : meetings.length > 0 ? (
+            <>
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {meetings.map((meeting) => {
+                  const isBookmarked = bookmarkOverrides[meeting.id] ?? meeting.isBookmarked
+
+                  return (
+                    <MeetingCard
+                      key={meeting.id}
+                      meeting={{ ...meeting, isBookmarked }}
+                      onBookmarkToggle={handleBookmarkToggle}
+                    />
+                  )
+                })}
+              </div>
+              <div ref={loadMoreRef} className="h-8" aria-hidden="true" />
+            </>
           ) : (
             <div className="rounded-xl border border-dashed border-[#c3c6d7] bg-white p-12 text-center text-[#565e74]">
               검색 결과가 없습니다. 다른 키워드로 검색해보세요.
             </div>
           )}
 
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-[#565e74]">
-            <LoaderCircle
-              className="size-5 animate-spin text-[#004ac6]"
-              aria-hidden="true"
-            />
-            <span className="text-base font-medium">불러오는 중...</span>
-          </div>
+          {isFetchingNextPage || (isFetching && !isLoading) ? <LoadingState /> : null}
         </section>
       </div>
     </main>
+  )
+}
+
+// 명세서 v2의 모임찾기 API는 목데이터 대신 GET /api/meetings를 사용한다.
+// 검색어, 카테고리, 정렬은 클라이언트 필터링이 아니라 keyword/category/sort query param으로 전달된다.
+// 응답의 nextCursor/hasNext를 useInfiniteQuery에 연결해 6개씩 이어서 불러온다.
+function getMeetingListParams(
+  searchQuery: string,
+  selectedCategory: string,
+  sortOrder: string,
+): MeetingListParams {
+  const keyword = searchQuery.trim()
+
+  return {
+    size: 6,
+    category: CATEGORY_QUERY_VALUE[selectedCategory] ?? "ALL",
+    sort: SORT_QUERY_VALUE[sortOrder] ?? "latest",
+    ...(keyword ? { keyword } : {}),
+  }
+}
+
+function mapMeetingSummaryToCardMeeting(meeting: MeetingSummary): Meeting {
+  return {
+    id: String(meeting.meetingId),
+    title: meeting.title,
+    date: formatDisplayDate(meeting.deadline),
+    deadline: formatDisplayDate(meeting.deadline),
+    status: getCardStatus(meeting.status),
+    category: CATEGORY_LABEL[meeting.category] ?? meeting.category,
+    memberCount: meeting.recruitSummary.currentCount,
+    maxMembers: meeting.recruitSummary.totalCount,
+    techStacks: meeting.techStacks,
+    jobs: meeting.positions.map((position) => ({
+      job: position.name,
+      current: position.currentCount,
+      max: position.recruitCount,
+    })),
+    imageUrl: meeting.thumbnailUrl ?? FALLBACK_MEETING_IMAGE_URL,
+    isBookmarked: meeting.isBookmarked,
+    isClosingToday: meeting.isDeadlineToday,
+  }
+}
+
+function getCardStatus(status: string | undefined): Meeting["status"] {
+  if (status === "COMPLETED") {
+    return "마감"
+  }
+
+  if (status === "ACTIVE") {
+    return "개설확정"
+  }
+
+  return "모집중"
+}
+
+function formatDisplayDate(date: string) {
+  const parsedDate = new Date(date)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date
+  }
+
+  const year = parsedDate.getFullYear()
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0")
+  const day = String(parsedDate.getDate()).padStart(2, "0")
+
+  return `${year}.${month}.${day}`
+}
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-10 text-[#565e74]">
+      <LoaderCircle
+        className="size-5 animate-spin text-[#004ac6]"
+        aria-hidden="true"
+      />
+      <span className="text-base font-medium">불러오는 중...</span>
+    </div>
   )
 }

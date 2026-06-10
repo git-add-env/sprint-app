@@ -46,6 +46,7 @@ export default function MeetingCard({ meeting, onBookmarkToggle }: MeetingCardPr
           src={meeting.imageUrl}
           alt={meeting.title}
           fill
+          unoptimized
           sizes="(min-width: 1280px) 384px, (min-width: 768px) 50vw, 100vw"
           className="object-cover"
         />
