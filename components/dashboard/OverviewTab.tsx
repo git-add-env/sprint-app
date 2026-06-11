@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Video } from "lucide-react"
 
 import { useJoinMeeting, useStartMeeting } from "@/hooks/dashboard/use-meeting-room"
@@ -19,7 +18,6 @@ type OverviewTabProps = {
 }
 
 export function OverviewTab({ meetingId, isLeader, status }: OverviewTabProps) {
-  const router = useRouter()
   const startMeeting = useStartMeeting(meetingId)
   const joinMeeting = useJoinMeeting(meetingId)
   const meetingBusy = startMeeting.isPending || joinMeeting.isPending
@@ -27,25 +25,16 @@ export function OverviewTab({ meetingId, isLeader, status }: OverviewTabProps) {
 
   async function onMeeting() {
     setMeetingError(null)
-
     try {
-      const room = isLeader
-        ? await startMeeting.mutateAsync()
-        : await joinMeeting.mutateAsync()
-      const params = new URLSearchParams({
-        meetingId: String(meetingId),
-        roomId: room.roomId,
-      })
-
-      window.sessionStorage.setItem(
-        `meeting-room:${room.roomId}`,
-        JSON.stringify(room),
-      )
-      router.push(`/meetings/videoMeeting?${params.toString()}`)
-    } catch (error) {
-      if (error instanceof ApiFetchError && error.status === 404) {
+      if (isLeader) {
+        await startMeeting.mutateAsync()
+      } else {
+        await joinMeeting.mutateAsync()
+      }
+    } catch (e) {
+      if (e instanceof ApiFetchError && e.status === 404) {
         setMeetingError("진행 중인 회의가 없습니다.")
-      } else if (error instanceof ApiFetchError && error.status === 409) {
+      } else if (e instanceof ApiFetchError && e.status === 409) {
         setMeetingError("이미 진행 중인 회의가 있습니다.")
       } else {
         setMeetingError("회의 연결에 실패했습니다.")
