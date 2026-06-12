@@ -79,6 +79,8 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
     ? splitSchedules(schedules)
     : { upcoming: [], past: [] }
   const pendingTitle = schedules?.find((s) => s.id === pendingId)?.title ?? null
+  // 제목·날짜·시간이 모두 채워져야 등록 가능. (설명은 선택)
+  const canSubmit = title.trim() !== "" && date !== "" && time !== ""
 
   return (
     <div className="flex flex-col gap-4">
@@ -150,9 +152,22 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
               />
               화상 회의 일정
             </label>
+            {!canSubmit && (
+              <p className="text-xs text-muted-foreground">
+                {!title.trim()
+                  ? "일정 제목을 입력해주세요."
+                  : !date
+                    ? "날짜를 선택해주세요."
+                    : "시간을 선택해주세요."}
+              </p>
+            )}
             <div className="flex justify-end">
-              <Button size="sm" onClick={add}>
-                등록
+              <Button
+                size="sm"
+                onClick={add}
+                disabled={!canSubmit || createSchedule.isPending}
+              >
+                {createSchedule.isPending ? "등록 중..." : "등록"}
               </Button>
             </div>
           </div>

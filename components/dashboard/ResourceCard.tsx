@@ -51,6 +51,9 @@ export function ResourceCard({ meetingId, isLeader }: ResourceCardProps) {
   }
 
   const pendingTitle = resources?.find((r) => r.id === pendingId)?.title ?? null
+  // http(s)로 시작하는 주소만 허용 (javascript: 등 위험 스킴 차단).
+  const isValidUrl = /^https?:\/\//i.test(url.trim())
+  const canSubmit = title.trim() !== "" && isValidUrl
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -77,10 +80,20 @@ export function ResourceCard({ meetingId, isLeader }: ResourceCardProps) {
             placeholder="https://..."
             className="h-9 flex-1 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <Button size="sm" onClick={add}>
-            추가
+          <Button
+            size="sm"
+            onClick={add}
+            disabled={!canSubmit || createResource.isPending}
+          >
+            {createResource.isPending ? "추가 중..." : "추가"}
           </Button>
         </div>
+      )}
+
+      {adding && url.trim() !== "" && !isValidUrl && (
+        <p className="mb-2 text-xs text-destructive">
+          http:// 또는 https:// 로 시작하는 주소를 입력해주세요.
+        </p>
       )}
 
       {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
