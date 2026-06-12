@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Calendar, ChevronDown, Trash2 } from "lucide-react"
 
 import { Calendars } from "@/components/common/Calendars"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { TimePicker } from "@/components/common/TimePicker"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -31,6 +32,8 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pastOpen, setPastOpen] = useState(false)
+  const [pendingId, setPendingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // 입력 폼.
   const [title, setTitle] = useState("")
@@ -61,9 +64,12 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
     }
   }
 
-  function remove(scheduleId: number) {
-    deleteSchedule.mutate(scheduleId, {
-      onError: () => setError("일정 삭제에 실패했습니다."),
+  // 휴지통 클릭 → 확인 다이얼로그를 띄우고, 확인 시 실제 삭제한다.
+  function confirmRemove() {
+    if (pendingId === null) return
+    deleteSchedule.mutate(pendingId, {
+      onSuccess: () => setPendingId(null),
+      onError: () => setDeleteError("일정 삭제에 실패했습니다."),
     })
   }
 
@@ -72,6 +78,7 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
   const { upcoming, past } = schedules
     ? splitSchedules(schedules)
     : { upcoming: [], past: [] }
+  const pendingTitle = schedules?.find((s) => s.id === pendingId)?.title ?? null
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,7 +173,7 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
                 key={schedule.id}
                 schedule={schedule}
                 isLeader={isLeader}
-                onRemove={remove}
+                onRemove={setPendingId}
               />
             ))}
           </ul>
@@ -199,7 +206,7 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
                   key={schedule.id}
                   schedule={schedule}
                   isLeader={isLeader}
-                  onRemove={remove}
+                  onRemove={setPendingId}
                   muted
                 />
               ))}
@@ -207,6 +214,21 @@ export function SchedulesTab({ meetingId, isLeader }: SchedulesTabProps) {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingId(null)
+            setDeleteError(null)
+          }
+        }}
+        title="일정 삭제"
+        description={`${pendingTitle ? `'${pendingTitle}' ` : ""}일정을 삭제하시겠어요? 삭제하면 되돌릴 수 없습니다.`}
+        loading={deleteSchedule.isPending}
+        error={deleteError}
+        onConfirm={confirmRemove}
+      />
     </div>
   )
 }

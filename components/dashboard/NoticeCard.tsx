@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ChevronRight, Megaphone, SquarePen, Trash2 } from "lucide-react"
 
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -28,6 +29,8 @@ export function NoticeCard({ meetingId, isLeader }: NoticeCardProps) {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [pendingId, setPendingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function add() {
     setError(null)
@@ -41,11 +44,16 @@ export function NoticeCard({ meetingId, isLeader }: NoticeCardProps) {
     }
   }
 
-  function remove(noticeId: number) {
-    deleteNotice.mutate(noticeId, {
-      onError: () => setError("공지 삭제에 실패했습니다."),
+  // 휴지통 클릭 → 확인 다이얼로그를 띄우고, 확인 시 실제 삭제한다.
+  function confirmRemove() {
+    if (pendingId === null) return
+    deleteNotice.mutate(pendingId, {
+      onSuccess: () => setPendingId(null),
+      onError: () => setDeleteError("공지 삭제에 실패했습니다."),
     })
   }
+
+  const pendingTitle = notices?.find((n) => n.id === pendingId)?.title ?? null
 
   // 다이얼로그를 닫을 때(취소·X·바깥클릭·ESC) 입력값과 에러를 초기화한다.
   function changeAdding(open: boolean) {
@@ -130,7 +138,7 @@ export function NoticeCard({ meetingId, isLeader }: NoticeCardProps) {
                   {isLeader && (
                     <button
                       type="button"
-                      onClick={() => remove(notice.id)}
+                      onClick={() => setPendingId(notice.id)}
                       className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
                       aria-label="삭제"
                     >
@@ -180,7 +188,7 @@ export function NoticeCard({ meetingId, isLeader }: NoticeCardProps) {
                       {isLeader && (
                         <button
                           type="button"
-                          onClick={() => remove(notice.id)}
+                          onClick={() => setPendingId(notice.id)}
                           className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
                           aria-label="삭제"
                         >
@@ -198,6 +206,21 @@ export function NoticeCard({ meetingId, isLeader }: NoticeCardProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={pendingId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingId(null)
+            setDeleteError(null)
+          }
+        }}
+        title="공지 삭제"
+        description={`${pendingTitle ? `'${pendingTitle}' ` : ""}공지를 삭제하시겠어요? 삭제하면 되돌릴 수 없습니다.`}
+        loading={deleteNotice.isPending}
+        error={deleteError}
+        onConfirm={confirmRemove}
+      />
     </div>
   )
 }

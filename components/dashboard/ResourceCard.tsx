@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
 
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { Button } from "@/components/ui/button"
 import {
   useCreateResource,
@@ -25,6 +26,8 @@ export function ResourceCard({ meetingId, isLeader }: ResourceCardProps) {
   const [title, setTitle] = useState("")
   const [url, setUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [pendingId, setPendingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function add() {
     setError(null)
@@ -38,11 +41,16 @@ export function ResourceCard({ meetingId, isLeader }: ResourceCardProps) {
     }
   }
 
-  function remove(resourceId: number) {
-    deleteResource.mutate(resourceId, {
-      onError: () => setError("자료 삭제에 실패했습니다."),
+  // 휴지통 클릭 → 확인 다이얼로그를 띄우고, 확인 시 실제 삭제한다.
+  function confirmRemove() {
+    if (pendingId === null) return
+    deleteResource.mutate(pendingId, {
+      onSuccess: () => setPendingId(null),
+      onError: () => setDeleteError("자료 삭제에 실패했습니다."),
     })
   }
+
+  const pendingTitle = resources?.find((r) => r.id === pendingId)?.title ?? null
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -101,7 +109,7 @@ export function ResourceCard({ meetingId, isLeader }: ResourceCardProps) {
               {isLeader && (
                 <button
                   type="button"
-                  onClick={() => remove(resource.id)}
+                  onClick={() => setPendingId(resource.id)}
                   className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
                   aria-label="삭제"
                 >
@@ -112,6 +120,21 @@ export function ResourceCard({ meetingId, isLeader }: ResourceCardProps) {
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={pendingId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingId(null)
+            setDeleteError(null)
+          }
+        }}
+        title="자료 삭제"
+        description={`${pendingTitle ? `'${pendingTitle}' ` : ""}자료를 삭제하시겠어요? 삭제하면 되돌릴 수 없습니다.`}
+        loading={deleteResource.isPending}
+        error={deleteError}
+        onConfirm={confirmRemove}
+      />
     </div>
   )
 }
