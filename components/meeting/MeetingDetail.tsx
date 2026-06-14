@@ -207,7 +207,7 @@ function MemberRow({ member }: MemberRowProps) {
   )
 }
 
-export default function MeetingDetail({ meetingId }: MeetingDetailProps) {
+export function MeetingDetail({ meetingId }: MeetingDetailProps) {
   const canFetch = typeof meetingId === "number" && Number.isFinite(meetingId)
   const detailQuery = useQuery({
     queryKey: canFetch ? queryKeys.meetings.detail(meetingId) : ["meetings", "detail", "missing"],
@@ -301,8 +301,8 @@ export default function MeetingDetail({ meetingId }: MeetingDetailProps) {
             <CardContent className="space-y-6 p-6">
               <SectionTitle icon={<BookOpenText className="size-5" />} title="모임소개" />
               <div className="space-y-4 text-base leading-7 text-[#434655]">
-                {meeting.description.split("\n").map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
+                {meeting.description.split("\n").map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
                 ))}
               </div>
             </CardContent>

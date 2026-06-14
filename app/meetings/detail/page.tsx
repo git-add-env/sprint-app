@@ -1,4 +1,4 @@
-import MeetingDetail from "@/components/meeting/MeetingDetail"
+import { MeetingDetail } from "@/components/meeting/MeetingDetail"
 
 type MeetingDetailPageProps = {
   searchParams: Promise<{
