@@ -19,7 +19,7 @@ import {
 import { BookMarkBtn } from "@/components/common/BookMarkBtn"
 import { MeetingCardImage } from "@/components/common/MeetingCard"
 import MeetingRecommendationCarousel from "@/components/common/MeetingRecommendationCarousel"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Badge,
   CategoryBadge,
@@ -183,6 +183,9 @@ function MemberRow({ member }: MemberRowProps) {
     <div className="flex items-center gap-4 rounded-lg p-2">
       <div className="relative">
         <Avatar className={cn("size-10", member.isLeader ? "bg-blue-100" : "bg-[#e0e3e5]")}>
+          {member.profileImage ? (
+            <AvatarImage src={member.profileImage} alt={`${member.name} profile`} />
+          ) : null}
           <AvatarFallback>{fallback}</AvatarFallback>
         </Avatar>
         {member.isLeader ? (
@@ -445,7 +448,14 @@ function formatDisplayDate(date: string | null | undefined) {
     return "-"
   }
 
-  const parsedDate = new Date(date)
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+  const parsedDate = dateOnlyMatch
+    ? new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      )
+    : new Date(date)
 
   if (Number.isNaN(parsedDate.getTime())) {
     return date

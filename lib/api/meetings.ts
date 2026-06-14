@@ -133,7 +133,22 @@ export function fetchMeetingMembers(meetingId: number, options?: ApiClientOption
 }
 
 async function fetchMeetingSummaryById(meetingId: number) {
-  const data = await fetchMeetings({ size: 100 })
+  let cursor: number | null | undefined
+  const visitedCursors = new Set<number>()
 
-  return data.meetings.find((meeting) => meeting.meetingId === meetingId) ?? null
+  while (true) {
+    const data = await fetchMeetings({ cursor, size: 100 })
+    const meeting = data.meetings.find((item) => item.meetingId === meetingId)
+
+    if (meeting) {
+      return meeting
+    }
+
+    if (!data.hasNext || data.nextCursor === null || visitedCursors.has(data.nextCursor)) {
+      return null
+    }
+
+    visitedCursors.add(data.nextCursor)
+    cursor = data.nextCursor
+  }
 }
